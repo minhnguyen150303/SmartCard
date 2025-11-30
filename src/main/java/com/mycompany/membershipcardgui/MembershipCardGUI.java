@@ -53,175 +53,15 @@ public class MembershipCardGUI extends JFrame {
     private JButton exchangePointsButton = new JButton("Đổi điểm");
     private JButton unblockCartButton = new JButton("Mở khoá thẻ");
     private JButton verifybtn = new JButton("Kiểm tra pin");
+    private JButton viewLogButton = new JButton("Xem lịch sử giao dịch");
 
     private JButton getPublicKeyButton = new JButton("Get Public Key");
     private JButton signDataButton = new JButton("Sign Data");
-
-//    public static void main(String[] args) {
-//        SwingUtilities.invokeLater(MembershipCardGUI::new);
-//    }
 
     public static void main(String[] args) {
         FlatLightLaf.setup(); // 🔥 Bật giao diện mượt như IntelliJ
         SwingUtilities.invokeLater(MembershipCardGUI::new);
     }
-
-
-//    public MembershipCardGUI() {
-//        frame = new JFrame("Giao Diện Thẻ Thành Viên Cửa Hàng");
-//        frame.setSize(700, 400);
-//        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-//        frame.setLayout(new GridLayout(1, 2, 10, 10)); // Thêm khoảng cách giữa các panel
-//
-//        // Panel giao tiếp APDU với BorderLayout
-//        apduPanel = new JPanel(new BorderLayout(10, 10));
-//        apduPanel.setBorder(BorderFactory.createTitledBorder("Kết nối thẻ"));
-//
-//        // Panel chứa các nút và trường phản hồi (Bắc)
-//        JPanel apduControlsPanel = new JPanel();
-//        apduControlsPanel.setLayout(new BoxLayout(apduControlsPanel, BoxLayout.Y_AXIS));  // Sắp xếp theo chiều dọc
-//
-//        // Tạo các nút và trường phản hồi
-//        JButton connectButton = new JButton("Connect");
-//        connectButton.setPreferredSize(new Dimension(100, 25));
-//        JButton disconnectButton = new JButton("Disconnect");
-//        disconnectButton.setPreferredSize(new Dimension(100, 25));
-//
-//        // Căn giữa các nút
-//        buttonPanel = new JPanel();
-//        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER));  // Căn giữa các nút
-//        buttonPanel.add(connectButton);
-//        apduControlsPanel.add(buttonPanel);
-//        buttonPanel = new JPanel();
-//        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER));  // Căn giữa các nút
-//        buttonPanel.add(disconnectButton);
-//        apduControlsPanel.add(buttonPanel);
-//
-//
-//        // Panel riêng cho trường phản hồi
-//        JPanel responsePanel = new JPanel();
-//        responsePanel.setLayout(new FlowLayout(FlowLayout.LEFT));  // Căn trái
-//        responsePanel.add(new JLabel("Phản hồi:"));
-//        responseField = new JTextField();
-//        responseField.setPreferredSize(new Dimension(250, 30));
-//        responseField.setEditable(false);
-//        responsePanel.add(responseField);
-//
-//        // Thêm panel phản hồi vào apduControlsPanel
-//        apduControlsPanel.add(responsePanel);
-//
-//        // Thêm panel vào panel chính
-//        apduPanel.add(apduControlsPanel, BorderLayout.NORTH);
-//
-//        // Gán sự kiện cho các nút
-//        connectButton.addActionListener(e -> connectToCard());
-//        disconnectButton.addActionListener(e -> disconnectFromCard());
-//
-//
-//
-//        frame.add(apduPanel);
-//
-//        memberPanel = new JPanel();
-//        memberPanel.setBorder(BorderFactory.createTitledBorder("Các nút chức năng"));
-//        memberPanel.setLayout(new BoxLayout(memberPanel, BoxLayout.Y_AXIS));
-//
-//
-//        buttonPanel = new JPanel();
-//        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER));  // Căn giữa các nút
-//        buttonPanel.add(initCardButton);
-//        memberPanel.add(buttonPanel);
-//
-//        buttonPanel = new JPanel();
-//        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER));  // Căn giữa các nút
-//        buttonPanel.add(readCardButton);
-//        memberPanel.add(buttonPanel);
-//
-//        buttonPanel = new JPanel();
-//        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER));  // Căn giữa các nút
-//        buttonPanel.add(addPointsButton);
-//        memberPanel.add(buttonPanel);
-//
-//        buttonPanel = new JPanel();
-//        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER));  // Căn giữa các nút
-//        buttonPanel.add(exchangePointsButton);
-//        memberPanel.add(buttonPanel);
-//
-//        buttonPanel = new JPanel();
-//        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER));  // Căn giữa các nút
-//        buttonPanel.add(unblockCartButton);
-//        memberPanel.add(buttonPanel);
-//
-//
-//     buttonPanel = new JPanel();
-//     buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER));  // Căn giữa các nút
-//      buttonPanel.add(verifybtn);
-//      memberPanel.add(buttonPanel);
-//
-//        // Trong constructor MembershipCardGUI:
-//        buttonPanel = new JPanel();
-//        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER)); // Căn giữa các nút
-//        buttonPanel.add(getPublicKeyButton);
-//        memberPanel.add(buttonPanel);
-//
-//        buttonPanel = new JPanel();
-//        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER)); // Căn giữa các nút
-//        buttonPanel.add(signDataButton);
-//        memberPanel.add(buttonPanel);
-//
-//        // Đặt kích thước cho các nút
-//        getPublicKeyButton.setPreferredSize(new Dimension(200, 50));
-//        signDataButton.setPreferredSize(new Dimension(200, 50));
-//
-//        // Đặt kích thước cho các nút
-//        initCardButton.setPreferredSize(new Dimension(200, 50));
-//        readCardButton.setPreferredSize(new Dimension(200, 50));
-//        addPointsButton.setPreferredSize(new Dimension(200, 50));
-//        exchangePointsButton.setPreferredSize(new Dimension(200, 50));
-//        unblockCartButton.setPreferredSize(new Dimension(200, 50));
-//        verifybtn.setPreferredSize(new Dimension(200, 50));
-//
-//        // Thêm các nút sự kiện
-//        initCardButton.addActionListener(e -> {
-//            try {
-//                initializeCard();
-//            } catch (IOException exception) {
-//                exception.printStackTrace();
-//            }
-//        });
-//        readCardButton.addActionListener(e -> readCard());
-//        // Nút sửa thông tin
-//        editButton.addActionListener(e -> {
-//            // Đóng cửa sổ hiện tại
-//            Window window = SwingUtilities.getWindowAncestor(infoPanel);
-//            if (window != null) {
-//                window.dispose();
-//            }
-//            changeInfo();
-//        });
-//
-//        // Nút đổi mã PIN
-//        changePinButton.addActionListener(e -> {
-//            // Đóng cửa sổ hiện tại
-//            Window window = SwingUtilities.getWindowAncestor(infoPanel);
-//            if (window != null) {
-//                window.dispose();
-//            }
-//            changePin();
-//        });
-//
-//        addPointsButton.addActionListener(e -> addPoints());
-//        exchangePointsButton.addActionListener(e -> exchangePoints());
-//        unblockCartButton.addActionListener(e -> unblockCard());
-//        verifybtn.addActionListener(e -> verifyPin());
-//        getPublicKeyButton.addActionListener(e -> getPublicKey());
-//        signDataButton.addActionListener(e -> signData());
-//
-//
-//        frame.add(memberPanel);
-//
-//        frame.setVisible(true);
-//    }
-
 
     public MembershipCardGUI() {
 
@@ -282,7 +122,7 @@ public class MembershipCardGUI extends JFrame {
 
         memberPanel = new JPanel();
         memberPanel.setBorder(BorderFactory.createTitledBorder("⚙️ CÁC CHỨC NĂNG"));
-        memberPanel.setLayout(new GridLayout(9, 1, 12, 12));
+        memberPanel.setLayout(new GridLayout(10, 1, 12, 12));
         memberPanel.setBackground(Color.WHITE);
 
         // === Style tất cả các nút ===
@@ -293,6 +133,7 @@ public class MembershipCardGUI extends JFrame {
         styleButton(unblockCartButton, new Color(41, 128, 185));
         styleButton(getPublicKeyButton, new Color(22, 160, 133));
         styleButton(signDataButton, new Color(127, 140, 141));
+        styleButton(viewLogButton, new Color(52, 73, 94));
 
         // ❗ KHÔNG thêm editButton và changePinButton vào panel này
         // Hai nút đó chỉ xuất hiện trong readCardData()
@@ -304,6 +145,7 @@ public class MembershipCardGUI extends JFrame {
         memberPanel.add(unblockCartButton);
         memberPanel.add(getPublicKeyButton);
         memberPanel.add(signDataButton);
+        memberPanel.add(viewLogButton);
 
         frame.add(memberPanel, BorderLayout.CENTER);
 
@@ -344,6 +186,7 @@ public class MembershipCardGUI extends JFrame {
 
         getPublicKeyButton.addActionListener(e -> getPublicKey());
         signDataButton.addActionListener(e -> signData());
+        viewLogButton.addActionListener(e -> viewTransactionLogs());
 
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
@@ -696,6 +539,17 @@ public class MembershipCardGUI extends JFrame {
         gbc.gridx = 1;
         infoPanel.add(getPoints, gbc);
 
+        JLabel tierLabel = new JLabel("Hạng thành viên:");
+        gbc.gridx = 0;
+        gbc.gridy = 6;
+        infoPanel.add(tierLabel, gbc);
+
+        JTextField tierField = new JTextField();
+        tierField.setEditable(false);
+        gbc.gridx = 1;
+        infoPanel.add(tierField, gbc);
+
+
         // Tạo một JPanel để chứa hai nút ngang hàng
         JPanel buttonPanel = new JPanel();
         buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10)); // Căn giữa hai nút
@@ -704,23 +558,92 @@ public class MembershipCardGUI extends JFrame {
 
         // Căn chỉnh các nút vào vị trí cuối cùng
         gbc.gridx = 0;
-        gbc.gridy = 6;
+        gbc.gridy = 7;
         gbc.gridwidth = 2; // Hai nút sẽ chiếm 2 cột
         gbc.fill = GridBagConstraints.CENTER;
         infoPanel.add(buttonPanel, gbc);
 
+//        try {
+//            // Gửi lệnh đọc dữ liệu
+//            CommandAPDU readCommand = new CommandAPDU(0x00, 0x06, 0x00, 0x00, 256);
+//            ResponseAPDU response = channel.transmit(readCommand);
+//
+//            if (response.getSW() == 0x9000) { // Kiểm tra trạng thái SW
+//                byte[] data = response.getData();
+//                String rawData = new String(data, StandardCharsets.UTF_8).trim();
+//
+//                // Tách dữ liệu bằng ký tự '|'
+//                String[] fields = rawData.split("\\|");
+//                if (fields.length >= 5) { // Đảm bảo có đủ trường (cập nhật cho điểm)
+//                    String maKH = fields[0];
+//                    String fullName = fields[1];
+//                    String birthDate = fields[2];
+//                    String gender = fields[3];
+//                    String points = fields[4];
+//
+//                    getMaKH.setText(maKH);
+//                    getName.setText(fullName);
+//                    getDob.setText(birthDate);
+//                    getGender.setText(gender);
+//                    getPoints.setText(points);
+//
+//                    // LẤY TIER TỪ THẺ
+//                    CommandAPDU getTierCmd = new CommandAPDU(0x00, 0x14, 0x00, 0x00);
+//                    ResponseAPDU tierResp = channel.transmit(getTierCmd);
+//
+//                    if (tierResp.getSW() == 0x9000) {
+//                        byte tierValue = tierResp.getData()[0];
+//                        String tierName;
+//
+//                        switch (tierValue) {
+//                            case 0: tierName = "Basic"; break;
+//                            case 1: tierName = "Silver"; break;
+//                            case 2: tierName = "Gold"; break;
+//                            case 3: tierName = "Platinum"; break;
+//                            case 4: tierName = "Diamond"; break;
+//                            default: tierName = "Unknown"; break;
+//                        }
+//
+//                        tierField.setText(tierName);
+//                    }
+//
+//                    // Cập nhật ảnh
+//                    getImageFile(imageInfoLabel);
+//
+//                    responseField.setText("Đọc dữ liệu thẻ thành công!");
+//                    JOptionPane.showConfirmDialog(null, infoPanel, "Thông tin thẻ", JOptionPane.CLOSED_OPTION, JOptionPane.PLAIN_MESSAGE);
+//                } else {
+//                    responseField.setText("Dữ liệu không đầy đủ hoặc sai định dạng!");
+//                }
+//            } else {
+//                responseField.setText("Lỗi từ thẻ: SW=" + Integer.toHexString(response.getSW()));
+//            }
+//        } catch (CardException ex) {
+//            responseField.setText("Lỗi đọc thẻ: " + ex.getMessage());
+//        }
         try {
-            // Gửi lệnh đọc dữ liệu
-            CommandAPDU readCommand = new CommandAPDU(0x00, 0x06, 0x00, 0x00, 256);
+            // Gửi lệnh đọc dữ liệu - KHÔNG set Le = 256 nữa
+            CommandAPDU readCommand = new CommandAPDU(0x00, 0x06, 0x00, 0x00);
             ResponseAPDU response = channel.transmit(readCommand);
 
-            if (response.getSW() == 0x9000) { // Kiểm tra trạng thái SW
-                byte[] data = response.getData();
-                String rawData = new String(data, StandardCharsets.UTF_8).trim();
+            if (response.getSW() == 0x9000) {
 
-                // Tách dữ liệu bằng ký tự '|'
+                // Lấy đúng số byte thẻ trả về (không lấy rác)
+                byte[] data = response.getData();
+
+                // Loại bỏ các byte 0x00 hoặc rác AES cuối buffer
+                int realLen = data.length;
+                while (realLen > 0 && data[realLen - 1] == 0x00) {
+                    realLen--;
+                }
+
+                // Chuyển thành chuỗi sạch
+                String rawData = new String(data, 0, realLen, StandardCharsets.UTF_8);
+
+                // Tách theo ký tự '|'
                 String[] fields = rawData.split("\\|");
-                if (fields.length >= 5) { // Đảm bảo có đủ trường (cập nhật cho điểm)
+
+                if (fields.length >= 5) {
                     String maKH = fields[0];
                     String fullName = fields[1];
                     String birthDate = fields[2];
@@ -733,20 +656,49 @@ public class MembershipCardGUI extends JFrame {
                     getGender.setText(gender);
                     getPoints.setText(points);
 
-                    // Cập nhật ảnh
+                    // LẤY TIER TỪ THẺ
+                    CommandAPDU getTierCmd = new CommandAPDU(0x00, 0x14, 0x00, 0x00);
+                    ResponseAPDU tierResp = channel.transmit(getTierCmd);
+
+                    if (tierResp.getSW() == 0x9000) {
+                        byte tierValue = tierResp.getData()[0];
+                        String tierName;
+
+                        switch (tierValue) {
+                            case 0: tierName = "Basic"; break;
+                            case 1: tierName = "Silver"; break;
+                            case 2: tierName = "Gold"; break;
+                            case 3: tierName = "Platinum"; break;
+                            case 4: tierName = "Diamond"; break;
+                            default: tierName = "Unknown"; break;
+                        }
+
+                        tierField.setText(tierName);
+                    }
+
+                    // LẤY ẢNH (sau khi info sạch)
                     getImageFile(imageInfoLabel);
 
                     responseField.setText("Đọc dữ liệu thẻ thành công!");
-                    JOptionPane.showConfirmDialog(null, infoPanel, "Thông tin thẻ", JOptionPane.CLOSED_OPTION, JOptionPane.PLAIN_MESSAGE);
+                    JOptionPane.showConfirmDialog(
+                            null,
+                            infoPanel,
+                            "Thông tin thẻ",
+                            JOptionPane.CLOSED_OPTION,
+                            JOptionPane.PLAIN_MESSAGE
+                    );
                 } else {
                     responseField.setText("Dữ liệu không đầy đủ hoặc sai định dạng!");
                 }
+
             } else {
                 responseField.setText("Lỗi từ thẻ: SW=" + Integer.toHexString(response.getSW()));
             }
+
         } catch (CardException ex) {
             responseField.setText("Lỗi đọc thẻ: " + ex.getMessage());
         }
+
     }
 
     private void changePin() {
@@ -765,7 +717,7 @@ public class MembershipCardGUI extends JFrame {
 
             pinPanel.add(new JLabel("Mã PIN cũ:"));
             pinPanel.add(oldPinField);
-            pinPanel.add(new JLabel("Mã PIN mới (tối đa 4 ký tự):"));
+            pinPanel.add(new JLabel("Mã PIN mới:"));
             pinPanel.add(newPinField);
             pinPanel.add(new JLabel("Xác nhận mã PIN mới:"));
             pinPanel.add(confirmPinField);
@@ -1251,6 +1203,128 @@ public class MembershipCardGUI extends JFrame {
         }
     }
 
+    private void viewTransactionLogs() {
+        if (!isConnected || channel == null) {
+            responseField.setText("Bạn phải kết nối với thẻ trước!");
+            return;
+        }
+
+        String[] columns = {"STT", "Nội dung", "Số dư"};
+        DefaultTableModel model = new DefaultTableModel(columns, 0);
+
+        try {
+            // 1. Lấy log từ thẻ
+            java.util.List<String> logsList = new java.util.ArrayList<>();
+
+            // P1 = 0 là log mới nhất, 1 là log tiếp theo...
+            for (int i = 0; i < 5; i++) {
+                CommandAPDU cmd = new CommandAPDU(0x00, 0x15, i, 0x00);
+                ResponseAPDU resp = channel.transmit(cmd);
+
+                if (resp.getSW() != 0x9000) {
+                    break; // hết log hoặc lỗi
+                }
+
+                byte[] logBytes = resp.getData();
+                String raw = new String(logBytes, StandardCharsets.UTF_8);
+
+                // Loại NULL do JavaCard fill
+                raw = raw.replace("\u0000", "");
+
+                if (raw.length() == 0) continue;
+                if (raw.charAt(0) != '+' && raw.charAt(0) != '-') continue;
+
+                logsList.add(raw);
+            }
+
+            if (logsList.isEmpty()) {
+                responseField.setText("Không có lịch sử giao dịch.");
+                return;
+            }
+
+            // logsList hiện đang: mới nhất -> cũ nhất
+            // Đảo lại: cũ nhất -> mới nhất (để tính toán theo thời gian)
+            java.util.Collections.reverse(logsList);
+
+            // 2. Parse delta (thay đổi điểm) từ từng log
+            java.util.List<Integer> deltas = new java.util.ArrayList<>();
+            for (String rawLog : logsList) {
+                char sign = rawLog.charAt(0);   // '+' hoặc '-'
+                String number = rawLog.substring(1);
+
+                // Bỏ 0 ở đầu: "000000100" -> "100"
+                number = number.replaceFirst("^0+(?!$)", "");
+                if (number.equals("")) number = "0";
+
+                int delta = Integer.parseInt(number);
+                if (sign == '-') delta = -delta;
+
+                deltas.add(delta);
+            }
+
+            // 3. Lấy điểm hiện tại trên thẻ (INS 0x13)
+            CommandAPDU getPointsCommand = new CommandAPDU(0x00, 0x13, 0x00, 0x00);
+            ResponseAPDU respPoints = channel.transmit(getPointsCommand);
+
+            if (respPoints.getSW() != 0x9000) {
+                responseField.setText("Lỗi khi lấy điểm hiện tại. SW="
+                        + Integer.toHexString(respPoints.getSW()));
+                return;
+            }
+
+            int currentPoints = Integer.parseInt(
+                    new String(respPoints.getData(), StandardCharsets.UTF_8).trim()
+            );
+
+            // 4. Tính tổng tất cả delta trong 5 log
+            int sumDelta = 0;
+            for (int d : deltas) {
+                sumDelta += d;
+            }
+
+            // Số dư trước giao dịch đầu tiên
+            int base = currentPoints - sumDelta;
+
+            // 5. Tính số dư sau từng giao dịch (theo thứ tự cũ -> mới)
+            java.util.List<Object[]> finalRows = new java.util.ArrayList<>();
+            int balance = base;
+
+            for (int i = 0; i < logsList.size(); i++) {
+                int delta = deltas.get(i);
+                balance += delta;
+
+                String displayChange = (delta > 0 ? "+" : "") + delta;
+
+                finalRows.add(new Object[]{
+                        null,            // STT tạm (sẽ set sau)
+                        displayChange,   // Nội dung (thay đổi điểm)
+                        balance          // Số dư
+                });
+            }
+
+            // 6. Đảo list để hiển thị: mới nhất -> cũ nhất
+            java.util.Collections.reverse(finalRows);
+
+            // Set STT và add vào model
+            for (int i = 0; i < finalRows.size(); i++) {
+                finalRows.get(i)[0] = i + 1;
+                model.addRow(finalRows.get(i));
+            }
+
+            JTable table = new JTable(model);
+            JScrollPane scrollPane = new JScrollPane(table);
+
+            JOptionPane.showMessageDialog(
+                    null,
+                    scrollPane,
+                    "Lịch sử giao dịch",
+                    JOptionPane.PLAIN_MESSAGE
+            );
+
+        } catch (Exception e) {
+            responseField.setText("Lỗi xem lịch sử: " + e.getMessage());
+        }
+    }
 
     private byte[] hexStringToByteArray(String s) {
         int len = s.length();
