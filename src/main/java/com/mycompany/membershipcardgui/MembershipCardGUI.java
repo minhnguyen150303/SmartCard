@@ -50,6 +50,7 @@ public class MembershipCardGUI extends JFrame {
     private JFrame frame;
     private JPanel apduPanel, infoPanel, memberPanel;
     private JTextField responseField, getMaKH, getName, getDob, getGender, getPoints;
+    private JTextField getPhone;
     private JPasswordField pinField;
     private JTextField makhField, nameField, dobField;
     private JComboBox<String> genderComboBox;
@@ -340,6 +341,9 @@ public class MembershipCardGUI extends JFrame {
         styleFunctionButton(getPublicKeyButton, new Color(52, 73, 94));
         styleFunctionButton(signDataButton, new Color(127, 140, 141));
         styleFunctionButton(viewLogButton, new Color(41, 128, 185));
+        JButton forgotPinButton = createModernButton("Quên mã PIN", "❓");
+        styleFunctionButton(forgotPinButton, new Color(52, 152, 219));
+        forgotPinButton.addActionListener(e -> forgotPin());
 
         grid.add(createFunctionCard(initCardButton));
         grid.add(createFunctionCard(readCardButton));
@@ -351,6 +355,7 @@ public class MembershipCardGUI extends JFrame {
         grid.add(createFunctionCard(getPublicKeyButton));
         grid.add(createFunctionCard(signDataButton));
         grid.add(createFunctionCard(viewLogButton));
+        grid.add(createFunctionCard(forgotPinButton));
 
         panel.add(title, BorderLayout.NORTH);
         panel.add(grid, BorderLayout.CENTER);
@@ -752,6 +757,15 @@ public class MembershipCardGUI extends JFrame {
             rightPanel.add(genderComboBox, gbc);
             row++;
 
+            // Số điện thoại
+            gbc.gridx = 0; gbc.gridy = row; gbc.weightx = 0; gbc.fill = 0;
+            rightPanel.add(createLabel("Số điện thoại:"), gbc);
+            JTextField phoneField = new JTextField();
+            phoneField.setBorder(BorderFactory.createLineBorder(new Color(210,210,210)));
+            gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+            rightPanel.add(phoneField, gbc);
+            row++;
+
             addMemberPanel.add(leftPanel, BorderLayout.LINE_START);
             addMemberPanel.add(rightPanel, BorderLayout.CENTER);
 
@@ -774,6 +788,7 @@ public class MembershipCardGUI extends JFrame {
                 String dob = dobField.getText().trim();
                 String gender = (String) genderComboBox.getSelectedItem();
                 String pin = new String(pinField.getPassword()).trim();
+                String phone = phoneField.getText().trim();
 
                 if (!pin.matches("\\d{6}")) {
                     JOptionPane.showMessageDialog(null,
@@ -783,7 +798,7 @@ public class MembershipCardGUI extends JFrame {
                     continue;
                 }
 
-                if (name.isEmpty() || dob.isEmpty() || pin.isEmpty()) {
+                if (name.isEmpty() || dob.isEmpty() || pin.isEmpty()|| phone.isEmpty()) {
                     JOptionPane.showMessageDialog(null, "Vui lòng điền đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                     continue;
                 }
@@ -792,7 +807,7 @@ public class MembershipCardGUI extends JFrame {
                     continue;
                 }
 
-                String data = String.join("|", pin, maKH, name, dob, gender);
+                String data = String.join("|", pin, maKH, name, dob, gender, phone);
                 byte[] dataBytes = data.getBytes(StandardCharsets.UTF_8);
 
                 if (dataBytes.length > 255) {
@@ -864,62 +879,76 @@ public class MembershipCardGUI extends JFrame {
         // Mã KH
         gbc.gridx = 0; gbc.gridy = row;
         infoPanel.add(createLabel("Mã KH:"), gbc);
-        getMaKH = new JTextField();
-        getMaKH.setEditable(false);
+        getMaKH = new JTextField(); getMaKH.setEditable(false);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx=1.0;
         infoPanel.add(getMaKH, gbc);
         row++;
 
         // Họ tên
-        gbc.gridx = 0; gbc.gridy = row; gbc.fill=0; gbc.weightx=0;
+        gbc.gridx = 0; gbc.gridy = row;
         infoPanel.add(createLabel("Họ và Tên:"), gbc);
         getName = new JTextField(); getName.setEditable(false);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx=1.0;
-        infoPanel.add(getName, gbc); row++;
+        gbc.gridx = 1;
+        infoPanel.add(getName, gbc);
+        row++;
 
         // Ngày sinh
-        gbc.gridx = 0; gbc.gridy = row; gbc.fill=0; gbc.weightx=0;
+        gbc.gridx = 0; gbc.gridy = row;
         infoPanel.add(createLabel("Ngày Sinh (dd/MM/yyyy):"), gbc);
         getDob = new JTextField(); getDob.setEditable(false);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx=1.0;
-        infoPanel.add(getDob, gbc); row++;
+        gbc.gridx = 1;
+        infoPanel.add(getDob, gbc);
+        row++;
 
         // Giới tính
         gbc.gridx = 0; gbc.gridy = row;
         infoPanel.add(createLabel("Giới Tính:"), gbc);
         getGender = new JTextField(); getGender.setEditable(false);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
-        infoPanel.add(getGender, gbc); row++;
+        gbc.gridx = 1;
+        infoPanel.add(getGender, gbc);
+        row++;
+
+        // Số điện thoại - NEW
+        gbc.gridx = 0; gbc.gridy = row;
+        infoPanel.add(createLabel("Số điện thoại:"), gbc);
+        getPhone = new JTextField(); getPhone.setEditable(false);
+        gbc.gridx = 1;
+        infoPanel.add(getPhone, gbc);
+        row++;
 
         // Số dư
         gbc.gridx = 0; gbc.gridy = row;
         infoPanel.add(createLabel("Số dư (VNĐ):"), gbc);
         getBalanceField = new JTextField(); getBalanceField.setEditable(false);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
-        infoPanel.add(getBalanceField, gbc); row++;
+        gbc.gridx = 1;
+        infoPanel.add(getBalanceField, gbc);
+        row++;
 
         // Điểm
         gbc.gridx = 0; gbc.gridy = row;
         infoPanel.add(createLabel("Tích điểm:"), gbc);
         getPoints = new JTextField(); getPoints.setEditable(false);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
-        infoPanel.add(getPoints, gbc); row++;
+        gbc.gridx = 1;
+        infoPanel.add(getPoints, gbc);
+        row++;
 
         // Hạng
         gbc.gridx = 0; gbc.gridy = row;
         infoPanel.add(createLabel("Hạng thành viên:"), gbc);
         JTextField tierField = new JTextField(); tierField.setEditable(false);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
-        infoPanel.add(tierField, gbc); row++;
+        gbc.gridx = 1;
+        infoPanel.add(tierField, gbc);
+        row++;
 
-        // Thời hạn
+        // Thời hạn hạng
         gbc.gridx = 0; gbc.gridy = row;
         infoPanel.add(createLabel("Thời hạn hạng còn lại:"), gbc);
         JTextField expireField = new JTextField(); expireField.setEditable(false);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
-        infoPanel.add(expireField, gbc); row++;
+        gbc.gridx = 1;
+        infoPanel.add(expireField, gbc);
+        row++;
 
-        // Button changePin + edit
+        // Nút
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         btnPanel.setBackground(LIGHT_BG);
         styleSmallActionButton(changePinButton, DANGER_COLOR);
@@ -928,7 +957,6 @@ public class MembershipCardGUI extends JFrame {
         btnPanel.add(editButton);
 
         gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 2;
-        gbc.fill = GridBagConstraints.CENTER;
         infoPanel.add(btnPanel, gbc);
 
         try {
@@ -936,35 +964,33 @@ public class MembershipCardGUI extends JFrame {
             ResponseAPDU response = channel.transmit(readCommand);
 
             if (response.getSW() == 0x9000) {
+
                 byte[] data = response.getData();
                 int realLen = data.length;
                 while (realLen > 0 && data[realLen - 1] == 0x00) realLen--;
+
                 String rawData = new String(data, 0, realLen, StandardCharsets.UTF_8);
                 String[] fields = rawData.split("\\|");
 
-                if (fields.length >= 5) {
-                    String maKH = fields[0];
-                    String fullName = fields[1];
-                    String birthDate = fields[2];
-                    String gender = fields[3];
-                    String points = fields[4];
+                // MUST HAVE 6 FIELDS
+                if (fields.length >= 6) {
 
-                    getMaKH.setText(maKH);
-                    getName.setText(fullName);
-                    getDob.setText(birthDate);
-                    getGender.setText(gender);
-                    getPoints.setText(points);
+                    getMaKH.setText(fields[0]);   // maKH
+                    getName.setText(fields[1]);   // hoten
+                    getDob.setText(fields[2]);    // ngaysinh
+                    getGender.setText(fields[3]); // gioitinh
+                    getPhone.setText(fields[4]);  // sdt
+                    getPoints.setText(fields[5]); // sodu điểm (đổi tên nhưng đúng dữ liệu applet)
 
+                    // Số dư tiền (tách API riêng)
                     long balance = getBalanceFromCard();
                     getBalanceField.setText(formatMoneyNoSign(balance) + " VNĐ");
 
-                    // đọc tier
+                    // ===== TIER =====
                     CommandAPDU getTierCmd = new CommandAPDU(0x00, 0x14, 0x00, 0x00);
                     ResponseAPDU tierResp = channel.transmit(getTierCmd);
-                    byte tierValue = 0;
-                    if (tierResp.getSW() == 0x9000 && tierResp.getData().length == 1) {
-                        tierValue = tierResp.getData()[0];
-                    }
+
+                    byte tierValue = tierResp.getData()[0];
                     String tierName = switch (tierValue) {
                         case 0 -> "Basic";
                         case 1 -> "Silver";
@@ -975,12 +1001,12 @@ public class MembershipCardGUI extends JFrame {
                     };
                     tierField.setText(tierName);
 
-                    // đọc expire
+                    // ===== EXPIRE =====
                     CommandAPDU getExpireCmd = new CommandAPDU(0x00, 0x1B, 0x00, 0x00);
                     ResponseAPDU expireResp = channel.transmit(getExpireCmd);
 
                     long expireTime = 0;
-                    if (expireResp.getSW() == 0x9000 && expireResp.getData().length == 4) {
+                    if (expireResp.getData().length == 4) {
                         byte[] exp = expireResp.getData();
                         expireTime =
                                 ((exp[0] & 0xFFL) << 24) |
@@ -992,6 +1018,7 @@ public class MembershipCardGUI extends JFrame {
                     long nowSec = System.currentTimeMillis() / 1000;
                     long remainSec = expireTime - nowSec;
                     String remainText;
+
                     if (expireTime == 0 || tierValue == 0) {
                         remainText = "Không giới hạn / Chưa mua gói";
                     } else if (remainSec <= 0) {
@@ -1002,43 +1029,12 @@ public class MembershipCardGUI extends JFrame {
                     }
                     expireField.setText(remainText);
 
-                    // auto reset tier nếu hết hạn
-                    if (expireTime != 0 && remainSec <= 0 && tierValue > 0) {
-                        try {
-                            byte[] zeroExpiry = new byte[]{0,0,0,0};
-                            CommandAPDU resetTierCmd = new CommandAPDU(0x00, 0x1A, 0x00, 0x00, zeroExpiry);
-                            ResponseAPDU resetTierResp = channel.transmit(resetTierCmd);
-
-                            CommandAPDU resetVoucherCmd = new CommandAPDU(0x00, 0x18, 0x00, 0x00);
-                            ResponseAPDU resetVoucherResp = channel.transmit(resetVoucherCmd);
-
-                            if (resetTierResp.getSW() == 0x9000) {
-                                tierField.setText("Basic");
-                                expireField.setText("ĐÃ HẾT HẠN");
-                                JOptionPane.showMessageDialog(
-                                        null,
-                                        "Gói hội viên đã hết hạn.\nThẻ tự động chuyển về hạng BASIC.",
-                                        "Thông báo",
-                                        JOptionPane.INFORMATION_MESSAGE
-                                );
-                            }
-                        } catch (Exception e) {
-                            JOptionPane.showMessageDialog(
-                                    null,
-                                    "Lỗi khi reset hạng: " + e.getMessage(),
-                                    "Lỗi",
-                                    JOptionPane.ERROR_MESSAGE
-                            );
-                        }
-                    }
-
-                    // lấy ảnh
+                    // ===== HÌNH ẢNH =====
                     getImageFile(imageInfoLabel);
 
                     responseField.setText("Đọc dữ liệu thẻ thành công!");
                     JOptionPane.showConfirmDialog(
-                            null,
-                            infoPanel,
+                            null, infoPanel,
                             "Thông tin thẻ",
                             JOptionPane.CLOSED_OPTION,
                             JOptionPane.PLAIN_MESSAGE
@@ -1046,13 +1042,16 @@ public class MembershipCardGUI extends JFrame {
                 } else {
                     responseField.setText("Dữ liệu không đầy đủ hoặc sai định dạng!");
                 }
+
             } else {
                 responseField.setText("Lỗi từ thẻ: SW=" + Integer.toHexString(response.getSW()));
             }
-        } catch (CardException ex) {
+
+        } catch (Exception ex) {
             responseField.setText("Lỗi đọc thẻ: " + ex.getMessage());
         }
     }
+
 
     // ================== ĐỔI PIN ==================
     private void changePin() {
@@ -1147,64 +1146,97 @@ public class MembershipCardGUI extends JFrame {
         while (true) {
             JPanel panel = new JPanel(new GridBagLayout());
             panel.setBackground(LIGHT_BG);
+
             GridBagConstraints gbc = new GridBagConstraints();
             gbc.insets = new Insets(5,5,5,5);
             gbc.anchor = GridBagConstraints.WEST;
 
-            JTextField nameFieldNew = new JTextField();
-            JTextField dobFieldNew = new JTextField();
-            JComboBox<String> genderComboBoxNew = new JComboBox<>(new String[]{"Nam", "Nữ"});
+            int row = 0;
 
-            int row=0;
-            gbc.gridx=0; gbc.gridy=row; panel.add(createLabel("Họ và Tên:"), gbc);
-            gbc.gridx=1; gbc.fill=GridBagConstraints.HORIZONTAL; gbc.weightx=1.0;
-            panel.add(nameFieldNew, gbc); row++;
+            // Họ tên
+            gbc.gridx = 0; gbc.gridy = row;
+            panel.add(createLabel("Họ và Tên:"), gbc);
+            JTextField nameFieldNew = new JTextField(getName.getText());
+            gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+            panel.add(nameFieldNew, gbc);
+            row++;
 
-            gbc.gridx=0; gbc.gridy=row; gbc.fill=0; gbc.weightx=0;
+            // Ngày sinh
+            gbc.gridx = 0; gbc.gridy = row; gbc.fill = 0; gbc.weightx = 0;
             panel.add(createLabel("Ngày Sinh (dd/MM/yyyy):"), gbc);
-            gbc.gridx=1; gbc.fill=GridBagConstraints.HORIZONTAL; gbc.weightx=1.0;
-            panel.add(dobFieldNew, gbc); row++;
+            JTextField dobFieldNew = new JTextField(getDob.getText());
+            gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+            panel.add(dobFieldNew, gbc);
+            row++;
 
-            gbc.gridx=0; gbc.gridy=row; gbc.fill=0; gbc.weightx=0;
+            // Số Điện Thoại
+            gbc.gridx = 0; gbc.gridy = row;
+            panel.add(createLabel("Số Điện Thoại:"), gbc);
+            JTextField phoneFieldNew = new JTextField(getPhone.getText());
+            gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+            panel.add(phoneFieldNew, gbc);
+            row++;
+
+            // Giới tính
+            gbc.gridx = 0; gbc.gridy = row;
             panel.add(createLabel("Giới Tính:"), gbc);
-            gbc.gridx=1; gbc.fill=GridBagConstraints.HORIZONTAL; gbc.weightx=1.0;
+            JComboBox<String> genderComboBoxNew = new JComboBox<>(new String[]{"Nam", "Nữ"});
+            genderComboBoxNew.setSelectedItem(getGender.getText());
+            gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
             panel.add(genderComboBoxNew, gbc);
 
-            int option = JOptionPane.showConfirmDialog(null, panel, "Thay đổi thông tin", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-            if (option == JOptionPane.CANCEL_OPTION || option == JOptionPane.CLOSED_OPTION) {
+            // Show popup
+            int option = JOptionPane.showConfirmDialog(
+                    null, panel, "Thay đổi thông tin",
+                    JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE
+            );
+
+            if (option != JOptionPane.OK_OPTION) {
                 responseField.setText("Hủy thao tác thay đổi thông tin.");
                 return;
             }
 
+            // Validate
             String name = nameFieldNew.getText().trim();
             String dob = dobFieldNew.getText().trim();
+            String phone = phoneFieldNew.getText().trim();
             String gender = (String) genderComboBoxNew.getSelectedItem();
 
-            if (name.isEmpty() || dob.isEmpty()) {
+            if (name.isEmpty() || dob.isEmpty() || phone.isEmpty()) {
                 JOptionPane.showMessageDialog(null, "Vui lòng nhập đầy đủ thông tin.", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 continue;
             }
+
             if (!dob.matches("\\d{2}/\\d{2}/\\d{4}")) {
                 JOptionPane.showMessageDialog(null, "Ngày sinh không đúng định dạng dd/MM/yyyy.", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 continue;
             }
 
+            if (!phone.matches("\\d{8,15}")) {
+                JOptionPane.showMessageDialog(null, "Số điện thoại không hợp lệ.", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                continue;
+            }
+
             try {
-                String changeInfoData = String.join("|", name, dob, gender);
+                // CHUẨN: gửi 4 trường: Hoten|NgaySinh|SoDienThoai|GioiTinh
+                String changeInfoData = name + "|" + dob + "|" + phone + "|" + gender;
                 byte[] dataBytes = changeInfoData.getBytes(StandardCharsets.UTF_8);
 
                 CommandAPDU changeInfoCommand = new CommandAPDU(0x00, 0x05, 0x00, 0x00, dataBytes);
                 ResponseAPDU response = channel.transmit(changeInfoCommand);
 
-                if (response.getSW1() == 0x90 && response.getSW2() == 0x00) {
+                if (response.getSW() == 0x9000) {
                     responseField.setText("Thông tin đã được thay đổi thành công.");
                     JOptionPane.showMessageDialog(null, "Thông tin đã được thay đổi thành công.", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+
                     readCardData();
                     return;
                 } else {
-                    String errorMessage = String.format("Lỗi khi thay đổi thông tin. SW: %04X", response.getSW());
-                    JOptionPane.showMessageDialog(null, errorMessage, "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(null,
+                            "Lỗi khi thay đổi thông tin. SW=" + Integer.toHexString(response.getSW()),
+                            "Lỗi", JOptionPane.ERROR_MESSAGE);
                 }
+
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(null, "Lỗi khi thay đổi thông tin: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
             }
@@ -1844,6 +1876,97 @@ public class MembershipCardGUI extends JFrame {
 
         } catch (Exception e) {
             responseField.setText("Lỗi mở khóa thẻ: " + e.getMessage());
+        }
+    }
+
+    private void forgotPin() {
+        if (!isConnected || channel == null) {
+            JOptionPane.showMessageDialog(null, "Bạn phải kết nối với thẻ trước!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // ==== Popup nhập số điện thoại ====
+        JTextField phoneField = new JTextField();
+        JPanel panel = new JPanel(new GridLayout(2, 1, 5, 5));
+        panel.setBackground(LIGHT_BG);
+        panel.add(createLabel("Nhập số điện thoại đã đăng ký trên thẻ:"));
+        panel.add(phoneField);
+
+        int opt = JOptionPane.showConfirmDialog(
+                null,
+                panel,
+                "Quên mã PIN",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+        if (opt != JOptionPane.OK_OPTION) return;
+
+        String enteredPhone = phoneField.getText().trim();
+        if (enteredPhone.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "Vui lòng nhập số điện thoại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            // ==== Đọc dữ liệu thẻ để lấy SĐT ====
+            CommandAPDU cmd = new CommandAPDU(0x00, 0x06, 0x00, 0x00);
+            ResponseAPDU resp = channel.transmit(cmd);
+
+            if (resp.getSW() != 0x9000) {
+                JOptionPane.showMessageDialog(null, "Không đọc được dữ liệu thẻ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            byte[] data = resp.getData();
+            int realLen = data.length;
+            while (realLen > 0 && data[realLen - 1] == 0) realLen--;
+
+            String raw = new String(data, 0, realLen, StandardCharsets.UTF_8);
+            String[] fields = raw.split("\\|");
+            if (fields.length < 5) {
+                JOptionPane.showMessageDialog(null, "Dữ liệu thẻ không hợp lệ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            String phoneOnCard = fields[4];
+
+            // ==== So sánh số điện thoại ====
+            if (!enteredPhone.equals(phoneOnCard)) {
+                JOptionPane.showMessageDialog(null, "SĐT không khớp!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // ==== Xác nhận reset ====
+            int confirm = JOptionPane.showConfirmDialog(
+                    null,
+                    "Xác nhận đặt lại mã PIN?\nPIN mới sẽ là: 000000",
+                    "Reset PIN",
+                    JOptionPane.OK_CANCEL_OPTION
+            );
+            if (confirm != JOptionPane.OK_OPTION) return;
+
+            // ==== Gửi lệnh Reset PIN – INS = 0x20 ====
+            CommandAPDU resetCmd = new CommandAPDU(0x00, 0x20, 0x00, 0x00);
+            ResponseAPDU resetResp = channel.transmit(resetCmd);
+
+            if (resetResp.getSW() == 0x9000) {
+                JOptionPane.showMessageDialog(
+                        null,
+                        "Đặt lại PIN thành công!\nPIN mới: 000000",
+                        "Thành công",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+            } else {
+                JOptionPane.showMessageDialog(
+                        null,
+                        "Lỗi reset PIN! SW=" + Integer.toHexString(resetResp.getSW()),
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE
+                );
+            }
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Lỗi hệ thống: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
     }
 
