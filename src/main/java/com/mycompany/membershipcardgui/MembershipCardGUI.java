@@ -16,6 +16,7 @@ import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
+import java.text.ParseException;
 
 import com.formdev.flatlaf.FlatLightLaf;
 
@@ -34,9 +35,12 @@ public class MembershipCardGUI extends JFrame {
     private static final Color TEXT_LIGHT     = new Color(128, 128, 128);
 
     private static final int LOG_ENTRY_SIZE = 16;
+    private static final int INS_UNLOCK_CARD = 0x03;
+    private static final int INS_CHANGE_PIN_AFTER_UNLOCK = 0x21;
 
     // ================== BIẾN LOGIC GỐC ==================
     private byte[] fileData;
+    private byte[] newAvatarData = null; // avatar mới khi sửa thông tin
     private boolean isConnected = false;
     private boolean isCardBlocked = false;
     private Card card = null;
@@ -70,8 +74,6 @@ public class MembershipCardGUI extends JFrame {
     private JButton unblockCartButton   = createModernButton("Mở khoá thẻ", "🔓");
     private JButton verifybtn           = createModernButton("Kiểm tra PIN", "✓");
     private JButton viewLogButton       = createModernButton("Xem lịch sử", "📄");
-    private JButton getPublicKeyButton  = createModernButton("Get Public Key", "🔑");
-    private JButton signDataButton      = createModernButton("Ký dữ liệu", "✍️");
 
     // ================== DATA GỐC ==================
     private static class Product {
@@ -338,8 +340,6 @@ public class MembershipCardGUI extends JFrame {
         styleFunctionButton(upgradeTierButton, new Color(241, 196, 15));
         styleFunctionButton(exchangePointsButton, new Color(155, 89, 182));
         styleFunctionButton(unblockCartButton, WARNING_COLOR);
-        styleFunctionButton(getPublicKeyButton, new Color(52, 73, 94));
-        styleFunctionButton(signDataButton, new Color(127, 140, 141));
         styleFunctionButton(viewLogButton, new Color(41, 128, 185));
         JButton forgotPinButton = createModernButton("Quên mã PIN", "❓");
         styleFunctionButton(forgotPinButton, new Color(52, 152, 219));
@@ -352,8 +352,6 @@ public class MembershipCardGUI extends JFrame {
         grid.add(createFunctionCard(upgradeTierButton));
         grid.add(createFunctionCard(exchangePointsButton));
         grid.add(createFunctionCard(unblockCartButton));
-        grid.add(createFunctionCard(getPublicKeyButton));
-        grid.add(createFunctionCard(signDataButton));
         grid.add(createFunctionCard(viewLogButton));
         grid.add(createFunctionCard(forgotPinButton));
 
@@ -453,9 +451,6 @@ public class MembershipCardGUI extends JFrame {
         exchangePointsButton.addActionListener(e -> exchangePoints());
         unblockCartButton.addActionListener(e -> unblockCard());
         verifybtn.addActionListener(e -> verifyPin());
-
-        getPublicKeyButton.addActionListener(e -> getPublicKey());
-        signDataButton.addActionListener(e -> signData());
         viewLogButton.addActionListener(e -> viewTransactionLogs());
         topUpButton.addActionListener(e -> topUpMoney());
         storeButton.addActionListener(e -> openStore());
@@ -655,6 +650,8 @@ public class MembershipCardGUI extends JFrame {
         }
 
         while (true) {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+            dateFormat.setLenient(false);
             JPanel addMemberPanel = new JPanel(new BorderLayout(15,15));
             addMemberPanel.setBackground(LIGHT_BG);
             addMemberPanel.setBorder(BorderFactory.createTitledBorder("Khởi tạo thẻ"));
@@ -740,13 +737,27 @@ public class MembershipCardGUI extends JFrame {
             rightPanel.add(nameField, gbc);
             row++;
 
-            // Ngày sinh
+            // Ngày sinh (CHỌN NGÀY)
             gbc.gridx = 0; gbc.gridy = row; gbc.weightx=0; gbc.fill=0;
-            rightPanel.add(createLabel("Ngày Sinh (dd/MM/yyyy):"), gbc);
-            dobField = new JTextField();
-            dobField.setBorder(BorderFactory.createLineBorder(new Color(210,210,210)));
+            rightPanel.add(createLabel("Ngày Sinh:"), gbc);
+
+            // Spinner chọn ngày
+            SpinnerDateModel birthModel = new SpinnerDateModel();
+            birthModel.setEnd(new Date());
+            JSpinner birthSpinner = new JSpinner(birthModel);
+            JSpinner.DateEditor birthEditor = new JSpinner.DateEditor(birthSpinner, "dd/MM/yyyy");
+            birthSpinner.setEditor(birthEditor);
+
+            // style cho giống input
+            JComponent editor = birthSpinner.getEditor();
+            if (editor instanceof JSpinner.DefaultEditor) {
+                JTextField tf = ((JSpinner.DefaultEditor) editor).getTextField();
+                tf.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+                tf.setBorder(BorderFactory.createLineBorder(new Color(210,210,210)));
+            }
+
             gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx=1.0;
-            rightPanel.add(dobField, gbc);
+            rightPanel.add(birthSpinner, gbc);
             row++;
 
             // Giới tính
@@ -785,10 +796,33 @@ public class MembershipCardGUI extends JFrame {
             try {
                 String maKH = makhField.getText().trim();
                 String name = nameField.getText().trim();
-                String dob = dobField.getText().trim();
+                Date birthDate = (Date) birthSpinner.getValue();
+                String dob = dateFormat.format(birthDate);
                 String gender = (String) genderComboBox.getSelectedItem();
                 String pin = new String(pinField.getPassword()).trim();
                 String phone = phoneField.getText().trim();
+
+                // ===== VALIDATE HỌ TÊN =====
+                if (!name.matches("^[A-Za-zÀ-ỹ\\s]+$")) {
+                    JOptionPane.showMessageDialog(
+                            null,
+                            "Họ và tên chỉ được chứa chữ cái (không số, không ký tự đặc biệt)!",
+                            "Lỗi dữ liệu",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                    continue;
+                }
+
+                // ===== VALIDATE SỐ ĐIỆN THOẠI VIỆT NAM =====
+                if (!phone.matches("^0\\d{9}$")) {
+                    JOptionPane.showMessageDialog(
+                            null,
+                            "Số điện thoại phải đúng 10 chữ số và bắt đầu bằng số 0!",
+                            "Lỗi dữ liệu",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                    continue;
+                }
 
                 if (!pin.matches("\\d{6}")) {
                     JOptionPane.showMessageDialog(null,
@@ -800,10 +834,6 @@ public class MembershipCardGUI extends JFrame {
 
                 if (name.isEmpty() || dob.isEmpty() || pin.isEmpty()|| phone.isEmpty()) {
                     JOptionPane.showMessageDialog(null, "Vui lòng điền đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-                    continue;
-                }
-                if (!dob.matches("\\d{2}/\\d{2}/\\d{4}")) {
-                    JOptionPane.showMessageDialog(null, "Ngày sinh không đúng định dạng dd/MM/yyyy.", "Lỗi", JOptionPane.ERROR_MESSAGE);
                     continue;
                 }
 
@@ -1144,14 +1174,59 @@ public class MembershipCardGUI extends JFrame {
         }
 
         while (true) {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+            dateFormat.setLenient(false);
             JPanel panel = new JPanel(new GridBagLayout());
             panel.setBackground(LIGHT_BG);
+
+            // ===== AVATAR UI (SỬA THÔNG TIN) =====
+            JPanel avatarBox = new JPanel(new BorderLayout());
+            avatarBox.setBackground(Color.WHITE);
+            avatarBox.setPreferredSize(new Dimension(120, 160));
+            avatarBox.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
+
+            JLabel avatarPreview = new JLabel();
+            avatarPreview.setHorizontalAlignment(SwingConstants.CENTER);
+            avatarPreview.setVerticalAlignment(SwingConstants.CENTER);
+            avatarBox.add(avatarPreview, BorderLayout.CENTER);
+
+            // Load avatar hiện tại từ thẻ lên preview
+            getImageFile(avatarPreview);
+
+            JButton changeAvatarBtn = new JButton("Đổi avatar");
+            changeAvatarBtn.setFocusPainted(false);
+            changeAvatarBtn.setBackground(ACCENT_PURPLE);
+            changeAvatarBtn.setForeground(Color.WHITE);
+
+            changeAvatarBtn.addActionListener(e -> {
+                byte[] picked = chooseAndReadFile(avatarPreview);
+                if (picked != null) {
+                    newAvatarData = picked; // lưu lại để lát nữa bấm OK thì gửi xuống thẻ
+                }
+            });
+
 
             GridBagConstraints gbc = new GridBagConstraints();
             gbc.insets = new Insets(5,5,5,5);
             gbc.anchor = GridBagConstraints.WEST;
 
             int row = 0;
+
+            // Avatar preview (chiếm 2 cột)
+            gbc.gridx = 0; gbc.gridy = row;
+            gbc.gridwidth = 2;
+            gbc.anchor = GridBagConstraints.CENTER;
+            panel.add(avatarBox, gbc);
+            row++;
+
+            gbc.gridx = 0; gbc.gridy = row;
+            gbc.gridwidth = 2;
+            panel.add(changeAvatarBtn, gbc);
+            row++;
+
+            // reset về layout bình thường
+            gbc.gridwidth = 1;
+            gbc.anchor = GridBagConstraints.WEST;
 
             // Họ tên
             gbc.gridx = 0; gbc.gridy = row;
@@ -1161,12 +1236,36 @@ public class MembershipCardGUI extends JFrame {
             panel.add(nameFieldNew, gbc);
             row++;
 
-            // Ngày sinh
+            // Ngày sinh (CHỌN NGÀY)
             gbc.gridx = 0; gbc.gridy = row; gbc.fill = 0; gbc.weightx = 0;
-            panel.add(createLabel("Ngày Sinh (dd/MM/yyyy):"), gbc);
-            JTextField dobFieldNew = new JTextField(getDob.getText());
+            panel.add(createLabel("Ngày Sinh:"), gbc);
+
+            // Spinner chọn ngày
+            SpinnerDateModel birthModel = new SpinnerDateModel();
+            birthModel.setEnd(new Date());
+            JSpinner birthSpinner = new JSpinner(birthModel);
+            JSpinner.DateEditor birthEditor = new JSpinner.DateEditor(birthSpinner, "dd/MM/yyyy");
+            birthSpinner.setEditor(birthEditor);
+
+            // set ngày cũ từ thẻ
+            String oldDob = getDob.getText().trim();
+            try {
+                Date oldDate = dateFormat.parse(oldDob);
+                birthSpinner.setValue(oldDate);
+            } catch (ParseException e) {
+                birthSpinner.setValue(new Date());
+            }
+
+            // style giống input
+            JComponent editor = birthSpinner.getEditor();
+            if (editor instanceof JSpinner.DefaultEditor) {
+                JTextField tf = ((JSpinner.DefaultEditor) editor).getTextField();
+                tf.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+                tf.setBorder(BorderFactory.createLineBorder(new Color(210,210,210)));
+            }
+
             gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
-            panel.add(dobFieldNew, gbc);
+            panel.add(birthSpinner, gbc);
             row++;
 
             // Số Điện Thoại
@@ -1198,17 +1297,33 @@ public class MembershipCardGUI extends JFrame {
 
             // Validate
             String name = nameFieldNew.getText().trim();
-            String dob = dobFieldNew.getText().trim();
+            Date birthDate = (Date) birthSpinner.getValue();
+            String dob = dateFormat.format(birthDate);
             String phone = phoneFieldNew.getText().trim();
             String gender = (String) genderComboBoxNew.getSelectedItem();
 
-            if (name.isEmpty() || dob.isEmpty() || phone.isEmpty()) {
-                JOptionPane.showMessageDialog(null, "Vui lòng nhập đầy đủ thông tin.", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            if (!name.matches("^[A-Za-zÀ-ỹ\\s]+$")) {
+                JOptionPane.showMessageDialog(
+                        null,
+                        "Họ và tên chỉ được chứa chữ cái!",
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE
+                );
                 continue;
             }
 
-            if (!dob.matches("\\d{2}/\\d{2}/\\d{4}")) {
-                JOptionPane.showMessageDialog(null, "Ngày sinh không đúng định dạng dd/MM/yyyy.", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            if (!phone.matches("^0\\d{9}$")) {
+                JOptionPane.showMessageDialog(
+                        null,
+                        "Số điện thoại phải đúng 10 chữ số và bắt đầu bằng số 0!",
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE
+                );
+                continue;
+            }
+
+            if (name.isEmpty() || dob.isEmpty() || phone.isEmpty()) {
+                JOptionPane.showMessageDialog(null, "Vui lòng nhập đầy đủ thông tin.", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 continue;
             }
 
@@ -1228,6 +1343,12 @@ public class MembershipCardGUI extends JFrame {
                 if (response.getSW() == 0x9000) {
                     responseField.setText("Thông tin đã được thay đổi thành công.");
                     JOptionPane.showMessageDialog(null, "Thông tin đã được thay đổi thành công.", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+
+                    // ===== NẾU CÓ AVATAR MỚI THÌ GỬI XUỐNG THẺ =====
+                    if (newAvatarData != null) {
+                        sendImageData(newAvatarData);
+                        newAvatarData = null;
+                    }
 
                     readCardData();
                     return;
@@ -1322,55 +1443,187 @@ public class MembershipCardGUI extends JFrame {
     }
 
     // ================== NẠP TIỀN – DIALOG MỚI ==================
+//    private void topUpMoney() {
+//        if (!isConnected || channel == null) {
+//            responseField.setText("Bạn phải kết nối với thẻ trước!");
+//            return;
+//        }
+//
+//        JPanel panel = new JPanel(new GridBagLayout());
+//        panel.setBackground(LIGHT_BG);
+//        GridBagConstraints gbc = new GridBagConstraints();
+//        gbc.insets = new Insets(5,5,5,5);
+//        gbc.anchor = GridBagConstraints.WEST;
+//
+//        gbc.gridx=0; gbc.gridy=0;
+//        panel.add(createLabel("Nhập số tiền nạp (VNĐ):"), gbc);
+//
+//        JTextField inputField = new JTextField();
+//        gbc.gridx=1; gbc.fill=GridBagConstraints.HORIZONTAL; gbc.weightx=1.0;
+//        panel.add(inputField, gbc);
+//
+//        int opt = JOptionPane.showConfirmDialog(this, panel, "Nạp tiền", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+//        if (opt != JOptionPane.OK_OPTION) {
+//            responseField.setText("Đã hủy nạp tiền.");
+//            return;
+//        }
+//
+//        String input = inputField.getText();
+//        if (input == null) {
+//            responseField.setText("Đã hủy nạp tiền.");
+//            return;
+//        }
+//
+//        input = input.trim();
+//        if (input.isEmpty()) {
+//            JOptionPane.showMessageDialog(this, "Số tiền không hợp lệ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+//            return;
+//        }
+//
+//        try {
+//            long amount = Long.parseLong(input);
+//            if (amount <= 0) {
+//                JOptionPane.showMessageDialog(this, "Số tiền phải > 0!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+//                return;
+//            }
+//
+//            long current = getBalanceFromCard();
+//            long updated = current + amount;
+//            setBalanceToCard(updated);
+//
+//            responseField.setText("Nạp tiền thành công. Số dư mới: " + updated + " VNĐ");
+//        } catch (NumberFormatException ex) {
+//            JOptionPane.showMessageDialog(this, "Số tiền không hợp lệ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+//        } catch (CardException ex) {
+//            JOptionPane.showMessageDialog(this, "Lỗi thẻ: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+//        }
+//    }
+
     private void topUpMoney() {
         if (!isConnected || channel == null) {
             responseField.setText("Bạn phải kết nối với thẻ trước!");
             return;
         }
 
-        JPanel panel = new JPanel(new GridBagLayout());
+        // ===== PANEL CHÍNH =====
+        JPanel panel = new JPanel(new BorderLayout(10, 15));
         panel.setBackground(LIGHT_BG);
+        panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        JLabel title = new JLabel("Chọn số tiền nạp");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        title.setForeground(PRIMARY_PURPLE);
+        panel.add(title, BorderLayout.NORTH);
+
+        // ===== GRID CÁC BLOCK NẠP NHANH =====
+        JPanel grid = new JPanel(new GridLayout(2, 2, 12, 12));
+        grid.setBackground(LIGHT_BG);
+
+        long[] quickAmounts = {
+                100_000L,
+                200_000L,
+                500_000L,
+                1_000_000L
+        };
+
+        Color[] colors = {
+                ACCENT_PURPLE,
+                PRIMARY_PURPLE,
+                SUCCESS_COLOR,
+                new Color(52, 152, 219)
+        };
+
+        JTextField inputField = new JTextField();
+        inputField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        inputField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(210,210,210)),
+                BorderFactory.createEmptyBorder(6,8,6,8)
+        ));
+
+        for (int i = 0; i < quickAmounts.length; i++) {
+            long amount = quickAmounts[i];
+
+            JPanel card = createSelectCard(
+                    formatMoneyNoSign(amount) + " VNĐ",
+                    "Nạp nhanh",
+                    colors[i % colors.length]
+            );
+
+            card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            card.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    inputField.setText(String.valueOf(amount));
+                }
+            });
+
+            grid.add(card);
+        }
+
+        panel.add(grid, BorderLayout.CENTER);
+
+        // ===== PANEL NHẬP TAY =====
+        JPanel inputPanel = new JPanel(new GridBagLayout());
+        inputPanel.setBackground(LIGHT_BG);
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5,5,5,5);
         gbc.anchor = GridBagConstraints.WEST;
 
-        gbc.gridx=0; gbc.gridy=0;
-        panel.add(createLabel("Nhập số tiền nạp (VNĐ):"), gbc);
+        gbc.gridx = 0; gbc.gridy = 0;
+        inputPanel.add(createLabel("Nhập số tiền khác (VNĐ):"), gbc);
 
-        JTextField inputField = new JTextField();
-        gbc.gridx=1; gbc.fill=GridBagConstraints.HORIZONTAL; gbc.weightx=1.0;
-        panel.add(inputField, gbc);
+        gbc.gridx = 1;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        inputPanel.add(inputField, gbc);
 
-        int opt = JOptionPane.showConfirmDialog(this, panel, "Nạp tiền", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        panel.add(inputPanel, BorderLayout.SOUTH);
+
+        // ===== HIỂN THỊ POPUP =====
+        int opt = JOptionPane.showConfirmDialog(
+                this,
+                panel,
+                "Nạp tiền",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
         if (opt != JOptionPane.OK_OPTION) {
             responseField.setText("Đã hủy nạp tiền.");
             return;
         }
 
-        String input = inputField.getText();
-        if (input == null) {
-            responseField.setText("Đã hủy nạp tiền.");
-            return;
-        }
-
-        input = input.trim();
+        String input = inputField.getText().trim();
         if (input.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Số tiền không hợp lệ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Vui lòng nhập số tiền!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         try {
             long amount = Long.parseLong(input);
             if (amount <= 0) {
-                JOptionPane.showMessageDialog(this, "Số tiền phải > 0!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Số tiền phải lớn hơn 0!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
             long current = getBalanceFromCard();
             long updated = current + amount;
-            setBalanceToCard(updated);
 
-            responseField.setText("Nạp tiền thành công. Số dư mới: " + updated + " VNĐ");
+            // LOG_TOPUP = 0x02 (giữ logic cũ)
+            setBalanceToCard(updated, 0x02);
+
+            responseField.setText("Nạp tiền thành công: +" +
+                    formatMoneyNoSign(amount) +
+                    " VNĐ | Số dư mới: " +
+                    formatMoneyNoSign(updated) + " VNĐ");
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Nạp tiền thành công!\nSố dư mới: " + formatMoneyNoSign(updated) + " VNĐ",
+                    "Thành công",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Số tiền không hợp lệ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
         } catch (CardException ex) {
@@ -1805,77 +2058,144 @@ public class MembershipCardGUI extends JFrame {
         }
     }
 
-    // ================== MỞ KHÓA THẺ ==================
     private void unblockCard() {
         if (!isConnected || channel == null) {
             responseField.setText("Bạn phải kết nối với thẻ trước!");
-            JOptionPane.showMessageDialog(null, "Bạn phải kết nối với thẻ trước!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(LIGHT_BG);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5,5,5,5);
-        gbc.anchor = GridBagConstraints.WEST;
-
-        gbc.gridx=0; gbc.gridy=0;
-        panel.add(createLabel("Nhập mã PIN để mở khóa:"), gbc);
-
-        JPasswordField passwordField = new JPasswordField();
-        gbc.gridx=1; gbc.fill=GridBagConstraints.HORIZONTAL; gbc.weightx=1.0;
-        panel.add(passwordField, gbc);
-
-        int option = JOptionPane.showConfirmDialog(
-                null,
-                panel,
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "Thẻ đang bị khóa do nhập sai PIN nhiều lần.\n" +
+                        "Bạn có chắc chắn muốn mở khóa thẻ không?\n\n" +
+                        "Sau khi mở khóa, bạn sẽ phải đặt PIN mới.",
                 "Mở khóa thẻ",
-                JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
         );
 
-        if (option != JOptionPane.OK_OPTION) {
-            responseField.setText("Hủy mở khóa thẻ.");
-            return;
-        }
-
-        String pin = new String(passwordField.getPassword()).trim();
-        if (!pin.matches("\\d{6}")) {
-            JOptionPane.showMessageDialog(null, "PIN phải gồm 6 chữ số!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) {
+            responseField.setText("Đã hủy mở khóa thẻ.");
             return;
         }
 
         try {
-            byte[] pinBytes = pin.getBytes(StandardCharsets.UTF_8);
-            CommandAPDU cmd = new CommandAPDU(0x00, 0x03, 0x00, 0x00, pinBytes);
-            ResponseAPDU resp = channel.transmit(cmd);
+            // Gửi APDU mở khóa (KHÔNG GỬI PIN)
+            CommandAPDU unlockApdu = new CommandAPDU(
+                    0x00,
+                    INS_UNLOCK_CARD, // = 0x03
+                    0x00,
+                    0x00
+            );
 
-            if (resp.getSW() != 0x9000) {
+            ResponseAPDU response = channel.transmit(unlockApdu);
+
+            if (response.getSW() != 0x9000) {
                 JOptionPane.showMessageDialog(
-                        null,
-                        "Lỗi từ thẻ! SW=" + Integer.toHexString(resp.getSW()),
+                        this,
+                        "Mở khóa thẻ thất bại! SW=" + Integer.toHexString(response.getSW()),
                         "Lỗi",
                         JOptionPane.ERROR_MESSAGE
                 );
                 return;
             }
 
-            byte[] data = resp.getData();
-            byte status = data[0];
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Mở khóa thẻ thành công!\nVui lòng đặt PIN mới.",
+                    "Thành công",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
 
-            if (status == 1) {
-                JOptionPane.showMessageDialog(null, "Mở khóa thẻ thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
-                responseField.setText("Mở khóa thẻ thành công!");
-            } else if (status == 0) {
-                JOptionPane.showMessageDialog(null, "PIN không đúng! Không thể mở khóa.", "Lỗi", JOptionPane.ERROR_MESSAGE);
-                responseField.setText("PIN mở khóa sai.");
+            // 👉 GỌI NGAY ĐỔI PIN
+            changePinAfterUnlock();
+
+        } catch (CardException e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Lỗi giao tiếp thẻ: " + e.getMessage(),
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    private void changePinAfterUnlock() {
+        JPasswordField newPinField = new JPasswordField();
+        JPasswordField confirmPinField = new JPasswordField();
+
+        Object[] message = {
+                "Nhập PIN mới (6 chữ số):", newPinField,
+                "Xác nhận PIN mới:", confirmPinField
+        };
+
+        int option = JOptionPane.showConfirmDialog(
+                this,
+                message,
+                "Đặt PIN mới",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (option != JOptionPane.OK_OPTION) {
+            responseField.setText("Chưa đặt PIN mới.");
+            return;
+        }
+
+        String newPin = new String(newPinField.getPassword()).trim();
+        String confirmPin = new String(confirmPinField.getPassword()).trim();
+
+        if (!newPin.matches("\\d{6}")) {
+            JOptionPane.showMessageDialog(this,
+                    "PIN phải gồm đúng 6 chữ số!",
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (!newPin.equals(confirmPin)) {
+            JOptionPane.showMessageDialog(this,
+                    "PIN xác nhận không khớp!",
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            CommandAPDU apdu = new CommandAPDU(
+                    0x00,
+                    INS_CHANGE_PIN_AFTER_UNLOCK, // = 0x21
+                    0x00,
+                    0x00,
+                    newPin.getBytes(StandardCharsets.UTF_8)
+            );
+
+            ResponseAPDU response = channel.transmit(apdu);
+
+            if (response.getSW() == 0x9000) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Đặt PIN mới thành công!",
+                        "Thành công",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+                responseField.setText("Đã mở khóa và đặt PIN mới thành công!");
             } else {
-                JOptionPane.showMessageDialog(null, "Thẻ vẫn đang bị khóa!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-                responseField.setText("Thẻ vẫn khóa.");
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Đặt PIN mới thất bại! SW=" + Integer.toHexString(response.getSW()),
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE
+                );
             }
 
-        } catch (Exception e) {
-            responseField.setText("Lỗi mở khóa thẻ: " + e.getMessage());
+        } catch (CardException e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Lỗi giao tiếp thẻ: " + e.getMessage(),
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE
+            );
         }
     }
 
@@ -1950,12 +2270,19 @@ public class MembershipCardGUI extends JFrame {
             ResponseAPDU resetResp = channel.transmit(resetCmd);
 
             if (resetResp.getSW() == 0x9000) {
+
                 JOptionPane.showMessageDialog(
                         null,
-                        "Đặt lại PIN thành công!\nPIN mới: 000000",
-                        "Thành công",
+                        "Đặt lại PIN thành công!\n" +
+                                "PIN tạm thời: 000000\n\n" +
+                                "Vui lòng đổi PIN mới ngay.",
+                        "Đổi mã PIN",
                         JOptionPane.INFORMATION_MESSAGE
                 );
+
+                // 👉 BẮT BUỘC GỌI ĐỔI PIN
+                changePin();   // dùng lại popup đổi PIN hiện có
+
             } else {
                 JOptionPane.showMessageDialog(
                         null,
@@ -1973,7 +2300,62 @@ public class MembershipCardGUI extends JFrame {
     // ================== CHỌN & GỬI ẢNH ==================
     // Hàm chọn file ảnh từ hệ thống (bản fix: luôn scale theo kích thước chuẩn)
     // Hàm chọn file ảnh từ hệ thống (bản fix: bỏ filePathField, luôn scale theo kích thước chuẩn)
-    private byte[] chooseAndReadFile() {
+//    private byte[] chooseAndReadFile() {
+//        JFileChooser fileChooser = new JFileChooser();
+//        fileChooser.setDialogTitle("Chọn ảnh đại diện");
+//        fileChooser.setFileFilter(
+//                new javax.swing.filechooser.FileNameExtensionFilter(
+//                        "Image files", "jpg", "jpeg", "png", "gif", "bmp"));
+//
+//        int result = fileChooser.showOpenDialog(this);
+//        if (result == JFileChooser.APPROVE_OPTION) {
+//            File selectedFile = fileChooser.getSelectedFile();
+//
+//            try {
+//                // Đọc toàn bộ dữ liệu file (để gửi xuống thẻ)
+//                byte[] data = Files.readAllBytes(selectedFile.toPath());
+//
+//                // Kích thước khung hiển thị ảnh
+//                int w = imageLabel.getWidth();
+//                int h = imageLabel.getHeight();
+//                if (w <= 0 || h <= 0) {
+//                    // nếu label chưa vẽ xong thì dùng size mặc định
+//                    w = 120;
+//                    h = 160;
+//                }
+//
+//                // Đọc ảnh và scale vào label
+//                BufferedImage img = ImageIO.read(selectedFile);
+//                if (img != null) {
+//                    Image scaled = img.getScaledInstance(w, h, Image.SCALE_SMOOTH);
+//                    imageLabel.setIcon(new ImageIcon(scaled));
+//                    imageLabel.revalidate();
+//                    imageLabel.repaint();
+//                } else {
+//                    JOptionPane.showMessageDialog(
+//                            this,
+//                            "Không đọc được file ảnh.",
+//                            "Lỗi",
+//                            JOptionPane.ERROR_MESSAGE
+//                    );
+//                    return null;
+//                }
+//
+//                return data; // dữ liệu gửi xuống thẻ
+//            } catch (IOException e) {
+//                responseField.setText("Lỗi khi đọc file: " + e.getMessage());
+//                JOptionPane.showMessageDialog(
+//                        this,
+//                        "Lỗi khi đọc file: " + e.getMessage(),
+//                        "Lỗi",
+//                        JOptionPane.ERROR_MESSAGE
+//                );
+//            }
+//        }
+//        return null;
+//    }
+
+    private byte[] chooseAndReadFile(JLabel previewLabel) {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Chọn ảnh đại diện");
         fileChooser.setFileFilter(
@@ -1985,49 +2367,36 @@ public class MembershipCardGUI extends JFrame {
             File selectedFile = fileChooser.getSelectedFile();
 
             try {
-                // Đọc toàn bộ dữ liệu file (để gửi xuống thẻ)
                 byte[] data = Files.readAllBytes(selectedFile.toPath());
 
-                // Kích thước khung hiển thị ảnh
-                int w = imageLabel.getWidth();
-                int h = imageLabel.getHeight();
-                if (w <= 0 || h <= 0) {
-                    // nếu label chưa vẽ xong thì dùng size mặc định
-                    w = 120;
-                    h = 160;
-                }
+                // scale ảnh vào đúng label truyền vào
+                int w = previewLabel.getWidth();
+                int h = previewLabel.getHeight();
+                if (w <= 0 || h <= 0) { w = 120; h = 160; }
 
-                // Đọc ảnh và scale vào label
                 BufferedImage img = ImageIO.read(selectedFile);
                 if (img != null) {
                     Image scaled = img.getScaledInstance(w, h, Image.SCALE_SMOOTH);
-                    imageLabel.setIcon(new ImageIcon(scaled));
-                    imageLabel.revalidate();
-                    imageLabel.repaint();
+                    previewLabel.setIcon(new ImageIcon(scaled));
+                    previewLabel.revalidate();
+                    previewLabel.repaint();
                 } else {
-                    JOptionPane.showMessageDialog(
-                            this,
-                            "Không đọc được file ảnh.",
-                            "Lỗi",
-                            JOptionPane.ERROR_MESSAGE
-                    );
+                    JOptionPane.showMessageDialog(this, "Không đọc được file ảnh.", "Lỗi", JOptionPane.ERROR_MESSAGE);
                     return null;
                 }
 
-                return data; // dữ liệu gửi xuống thẻ
+                return data;
             } catch (IOException e) {
-                responseField.setText("Lỗi khi đọc file: " + e.getMessage());
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Lỗi khi đọc file: " + e.getMessage(),
-                        "Lỗi",
-                        JOptionPane.ERROR_MESSAGE
-                );
+                JOptionPane.showMessageDialog(this, "Lỗi khi đọc file: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
             }
         }
         return null;
     }
 
+    private byte[] chooseAndReadFile() {
+        // dùng imageLabel (khởi tạo thẻ)
+        return chooseAndReadFile(imageLabel);
+    }
 
     private void sendImageData(byte[] fileData) {
         int maxDataLength = 255;
@@ -2082,98 +2451,6 @@ public class MembershipCardGUI extends JFrame {
         }
     }
 
-    // ================== RSA PUBLIC KEY & SIGN ==================
-    private void getPublicKey() {
-        try {
-            byte[] modulusCommand = new byte[]{(byte)0x00, (byte)0x10, (byte)0x01, (byte)0x00};
-            ResponseAPDU modulusResponse = channel.transmit(new CommandAPDU(modulusCommand));
-
-            if (modulusResponse.getSW() == 0x9000) {
-                String modulus = bytesToHex(modulusResponse.getData());
-                responseField.setText("Modulus: " + modulus);
-            } else {
-                responseField.setText("Error retrieving public key.");
-            }
-        } catch (Exception ex) {
-            responseField.setText("Error retrieving public key.");
-            ex.printStackTrace();
-        }
-    }
-
-    private void signData() {
-        try {
-            JPanel panel = new JPanel(new GridBagLayout());
-            panel.setBackground(LIGHT_BG);
-            GridBagConstraints gbc = new GridBagConstraints();
-            gbc.insets = new Insets(5,5,5,5);
-            gbc.anchor = GridBagConstraints.WEST;
-
-            JTextField dataField = new JTextField();
-            JPasswordField pinFieldLocal = new JPasswordField();
-
-            gbc.gridx=0; gbc.gridy=0;
-            panel.add(createLabel("Dữ liệu cần ký:"), gbc);
-            gbc.gridx=1; gbc.fill=GridBagConstraints.HORIZONTAL; gbc.weightx=1.0;
-            panel.add(dataField, gbc);
-
-            gbc.gridx=0; gbc.gridy=1; gbc.fill=0; gbc.weightx=0;
-            panel.add(createLabel("PIN:"), gbc);
-            gbc.gridx=1; gbc.fill=GridBagConstraints.HORIZONTAL; gbc.weightx=1.0;
-            panel.add(pinFieldLocal, gbc);
-
-            int opt = JOptionPane.showConfirmDialog(
-                    null,
-                    panel,
-                    "Ký dữ liệu",
-                    JOptionPane.OK_CANCEL_OPTION,
-                    JOptionPane.PLAIN_MESSAGE
-            );
-
-            if (opt != JOptionPane.OK_OPTION) {
-                responseField.setText("No data or PIN provided.");
-                return;
-            }
-
-            String dataToSign = dataField.getText();
-            String pinInput = new String(pinFieldLocal.getPassword());
-
-            if (dataToSign == null || dataToSign.isEmpty() || pinInput == null || pinInput.isEmpty()) {
-                responseField.setText("No data or PIN provided.");
-                return;
-            }
-
-            byte[] dataBytes = dataToSign.getBytes(StandardCharsets.UTF_8);
-            byte[] pinBytes = pinInput.getBytes(StandardCharsets.UTF_8);
-
-            ByteArrayOutputStream dataStream = new ByteArrayOutputStream();
-            dataStream.write(pinBytes);
-            dataStream.write((byte)0x7C);
-            dataStream.write(dataBytes);
-            byte[] combinedData = dataStream.toByteArray();
-
-            ByteArrayOutputStream commandStream = new ByteArrayOutputStream();
-            commandStream.write((byte)0x00);
-            commandStream.write((byte)0x11);
-            commandStream.write((byte)0x00);
-            commandStream.write((byte)0x00);
-            commandStream.write((byte)combinedData.length);
-            commandStream.write(combinedData);
-
-            ResponseAPDU response = channel.transmit(new CommandAPDU(commandStream.toByteArray()));
-
-            if (response.getSW() == 0x9000) {
-                String signature = bytesToHex(response.getData());
-                responseField.setText("Signature: " + signature);
-            } else {
-                responseField.setText("Error: " + Integer.toHexString(response.getSW()));
-            }
-        } catch (Exception ex) {
-            responseField.setText("Error signing data.");
-            ex.printStackTrace();
-        }
-    }
-
-    // ================== LỊCH SỬ GIAO DỊCH ==================
     // ================== LỊCH SỬ GIAO DỊCH (THANH TÍM NHẠT) ==================
     private void viewTransactionLogs() {
         if (!isConnected || channel == null) {
@@ -2258,33 +2535,52 @@ public class MembershipCardGUI extends JFrame {
             listPanel.setBackground(LIGHT_BG);
             listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
 
+            // ===== HEADER CỘT =====
+            JPanel header = new JPanel(new GridLayout(1, 5));
+            header.setBackground(PRIMARY_PURPLE);
+            header.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+
+            header.add(createHeaderLabel("STT"));
+            header.add(createHeaderLabel("Thời gian"));
+            header.add(createHeaderLabel("Loại giao dịch"));
+            header.add(createHeaderLabel("Biến động"));
+            header.add(createHeaderLabel("Số dư"));
+
+            listPanel.add(header);
+            listPanel.add(Box.createVerticalStrut(6));
+
             Color rowColor = new Color(235, 225, 245); // tím nhạt
             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss dd/MM/yyyy");
 
             for (int i = 0; i < deltas.size(); i++) {
-                JPanel row = new JPanel(new GridLayout(1, 4));
+                JPanel row = new JPanel(new GridLayout(1, 5));
                 row.setBackground(rowColor);
                 row.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
 
                 JLabel sttLabel = new JLabel(String.valueOf(i + 1));
                 JLabel timeLabel = new JLabel(sdf.format(new Date(times.get(i) * 1000)));
                 JLabel typeLabel = new JLabel(types.get(i));
-                JLabel amountLabel = new JLabel(
-                        formatMoneyDelta(deltas.get(i)) +
-                                " | " + formatMoneyNoSign(balances.get(i))
-                );
+                JLabel deltaLabel = new JLabel(formatMoneyDelta(deltas.get(i)));
+                JLabel balanceLabel = new JLabel(formatMoneyNoSign(balances.get(i)));
 
-                sttLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-                timeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                typeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                amountLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+                // ===== TÔ MÀU BIẾN ĐỘNG =====
+                if (deltas.get(i) >= 0) {
+                    deltaLabel.setForeground(SUCCESS_COLOR); // xanh
+                } else {
+                    deltaLabel.setForeground(DANGER_COLOR);  // đỏ
+                }
 
-                amountLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+                sttLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                timeLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                typeLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                deltaLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                balanceLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
                 row.add(sttLabel);
                 row.add(timeLabel);
                 row.add(typeLabel);
-                row.add(amountLabel);
+                row.add(deltaLabel);
+                row.add(balanceLabel);
 
                 listPanel.add(row);
                 listPanel.add(Box.createVerticalStrut(6));
@@ -2304,6 +2600,14 @@ public class MembershipCardGUI extends JFrame {
         } catch (Exception e) {
             responseField.setText("Lỗi xem log: " + e.getMessage());
         }
+    }
+
+    private JLabel createHeaderLabel(String text) {
+        JLabel lb = new JLabel(text);
+        lb.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lb.setForeground(Color.WHITE);
+        lb.setHorizontalAlignment(SwingConstants.CENTER);
+        return lb;
     }
 
     // ================== UTIL ==================
