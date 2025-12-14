@@ -1717,14 +1717,18 @@ public class MembershipCardGUI extends JFrame {
         }
     }
 
-    private void handlePurchase(Product p) throws CardException {
-        long balance = getBalanceFromCard();
-        int tier = getTierFromCard();
-        int voucherLv = getVoucherLevel();
+    /**
+     * Tính giá cuối cùng theo thứ tự:
+     * 1. Giảm theo hạng
+     * 2. Giảm theo voucher
+     */
+    private long calculateFinalPrice(long basePrice, int tier, int voucherLv) {
 
+        // ===== TIER DISCOUNT =====
         double tierDiscount = tier * 0.05;
         if (tierDiscount > 0.20) tierDiscount = 0.20;
 
+        // ===== VOUCHER DISCOUNT =====
         double voucherDiscount;
         switch (voucherLv) {
             case 1 -> voucherDiscount = 0.10;
@@ -1735,15 +1739,38 @@ public class MembershipCardGUI extends JFrame {
             default -> voucherDiscount = 0.0;
         }
 
-        double totalDiscount = tierDiscount + voucherDiscount;
-        if (totalDiscount > 0.7) totalDiscount = 0.7;
+        // ===== TÍNH GIÁ =====
+        long afterTier = Math.round(basePrice * (1.0 - tierDiscount));
+        return Math.round(afterTier * (1.0 - voucherDiscount));
+    }
 
-        long finalPrice = (long)Math.round(p.price * (1.0 - totalDiscount));
+    private void handlePurchase(Product p) throws CardException {
+        long balance = getBalanceFromCard();
+        int tier = getTierFromCard();
+        int voucherLv = getVoucherLevel();
+
+        long finalPrice = calculateFinalPrice(p.price, tier, voucherLv);
+
+        // ===== TÍNH RIÊNG ĐỂ HIỂN THỊ =====
+        double tierDiscount = Math.min(tier * 0.05, 0.20);
+        long priceAfterTier = Math.round(p.price * (1.0 - tierDiscount));
+
+        double voucherDiscount = switch (voucherLv) {
+            case 1 -> 0.10;
+            case 2 -> 0.15;
+            case 3 -> 0.20;
+            case 4 -> 0.25;
+            case 5 -> 0.30;
+            default -> 0.0;
+        };
 
         int confirm = JOptionPane.showConfirmDialog(
                 this,
                 "Giá gốc: " + formatPrice(p.price) +
-                        "\nGiảm giá: " + (int)(totalDiscount * 100) + "%" +
+                        "\nGiảm theo hạng: " + (int)(tierDiscount * 100) + "%" +
+                        "\nGiá sau giảm hạng: " + formatPrice(priceAfterTier) +
+                        "\nGiảm voucher: " + (int)(voucherDiscount * 100) + "%" +
+                        "\n--------------------------------" +
                         "\nGiá thanh toán: " + formatPrice(finalPrice) +
                         "\nSố dư hiện tại: " + formatPrice(balance) +
                         "\n\nXác nhận mua?",
@@ -1763,24 +1790,26 @@ public class MembershipCardGUI extends JFrame {
             return;
         }
 
+        // ===== TRỪ TIỀN =====
         long newBalance = balance - finalPrice;
-        setBalanceToCard(newBalance, 0x03);
+        setBalanceToCard(newBalance, 0x03); // LOG_MUA_HÀNG
 
-        int currentPoints = getPointsFromCard();
-        int earned = (int)(p.price / 500_000) * 100;
-        int newPoints = currentPoints + earned;
+        // ===== CỘNG ĐIỂM (LUÔN +100) =====
+        int newPoints = getPointsFromCard() + 50;
         setPointsToCard(newPoints);
 
+        // ===== DÙNG XONG VOUCHER → RESET =====
         if (voucherLv > 0) {
             setVoucherLevel(0);
         }
 
         responseField.setText("Mua thành công " + p.name +
-                ". Số dư còn: " + newBalance + " VNĐ, điểm: " + newPoints);
+                ". Số dư còn: " + formatMoneyNoSign(newBalance) +
+                " VNĐ, điểm: " + newPoints);
+
         JOptionPane.showMessageDialog(this, "Mua thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    // ================== ĐỔI ĐIỂM LẤY VOUCHER ==================
     // ================== ĐỔI ĐIỂM LẤY VOUCHER (UI Ô VUÔNG) ==================
     private void exchangePoints() {
         if (!isConnected || channel == null) {
@@ -2296,64 +2325,6 @@ public class MembershipCardGUI extends JFrame {
             JOptionPane.showMessageDialog(null, "Lỗi hệ thống: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
     }
-
-    // ================== CHỌN & GỬI ẢNH ==================
-    // Hàm chọn file ảnh từ hệ thống (bản fix: luôn scale theo kích thước chuẩn)
-    // Hàm chọn file ảnh từ hệ thống (bản fix: bỏ filePathField, luôn scale theo kích thước chuẩn)
-//    private byte[] chooseAndReadFile() {
-//        JFileChooser fileChooser = new JFileChooser();
-//        fileChooser.setDialogTitle("Chọn ảnh đại diện");
-//        fileChooser.setFileFilter(
-//                new javax.swing.filechooser.FileNameExtensionFilter(
-//                        "Image files", "jpg", "jpeg", "png", "gif", "bmp"));
-//
-//        int result = fileChooser.showOpenDialog(this);
-//        if (result == JFileChooser.APPROVE_OPTION) {
-//            File selectedFile = fileChooser.getSelectedFile();
-//
-//            try {
-//                // Đọc toàn bộ dữ liệu file (để gửi xuống thẻ)
-//                byte[] data = Files.readAllBytes(selectedFile.toPath());
-//
-//                // Kích thước khung hiển thị ảnh
-//                int w = imageLabel.getWidth();
-//                int h = imageLabel.getHeight();
-//                if (w <= 0 || h <= 0) {
-//                    // nếu label chưa vẽ xong thì dùng size mặc định
-//                    w = 120;
-//                    h = 160;
-//                }
-//
-//                // Đọc ảnh và scale vào label
-//                BufferedImage img = ImageIO.read(selectedFile);
-//                if (img != null) {
-//                    Image scaled = img.getScaledInstance(w, h, Image.SCALE_SMOOTH);
-//                    imageLabel.setIcon(new ImageIcon(scaled));
-//                    imageLabel.revalidate();
-//                    imageLabel.repaint();
-//                } else {
-//                    JOptionPane.showMessageDialog(
-//                            this,
-//                            "Không đọc được file ảnh.",
-//                            "Lỗi",
-//                            JOptionPane.ERROR_MESSAGE
-//                    );
-//                    return null;
-//                }
-//
-//                return data; // dữ liệu gửi xuống thẻ
-//            } catch (IOException e) {
-//                responseField.setText("Lỗi khi đọc file: " + e.getMessage());
-//                JOptionPane.showMessageDialog(
-//                        this,
-//                        "Lỗi khi đọc file: " + e.getMessage(),
-//                        "Lỗi",
-//                        JOptionPane.ERROR_MESSAGE
-//                );
-//            }
-//        }
-//        return null;
-//    }
 
     private byte[] chooseAndReadFile(JLabel previewLabel) {
         JFileChooser fileChooser = new JFileChooser();
